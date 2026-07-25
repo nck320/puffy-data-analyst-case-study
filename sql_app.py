@@ -1,7 +1,11 @@
-import duckdb
+import os
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+
+# Base Directory Setup
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # -----------------------------------------------------------------------------
 # 1. Page Configuration & Executive CSS
@@ -42,226 +46,49 @@ st.markdown(
 
 
 # -----------------------------------------------------------------------------
-# 2. Dynamic Pipeline (DuckDB Direct Processing)
+# 2. Fast CSV Data Ingestion
 # -----------------------------------------------------------------------------
 @st.cache_data
-def run_sql_pipeline():
-  con = duckdb.connect()
+def load_sql_data():
+  df_funnel = pd.read_csv(os.path.join(BASE_DIR, "1_linear_funnel.csv"))
+  df_revenue = pd.read_csv(os.path.join(BASE_DIR, "2_revenue_metrics.csv"))
 
-  # 1. Linear Funnel
-  df_funnel = con.execute("""
-    WITH user_arm AS (
-        SELECT client_id, json_extract_string(event_data, '$.experiment_var') AS arm,
-               ROW_NUMBER() OVER (PARTITION BY client_id ORDER BY ingestion_timestamp ASC) AS rn
-        FROM read_csv_auto('ab_hero_v4_events.csv')
-        WHERE event_name = 'ab_experiment_init'
-    ),
-    valid_events AS (
-        SELECT e.*, u.arm FROM read_csv_auto('ab_hero_v4_events.csv') e
-        JOIN user_arm u ON e.client_id = u.client_id 
-        WHERE u.rn = 1 AND u.arm IS NOT NULL AND e.session_traffic_quality = 'valid'
-    ),
-    totals AS (
-        SELECT arm, COUNT(DISTINCT client_id) AS base_users FROM valid_events GROUP BY arm
-    )
-    SELECT 
-        v.arm,
-        t.base_users,
-        COUNT(DISTINCT CASE WHEN event_name = 'page_viewed' THEN client_id END) AS page_viewed,
-        COUNT(DISTINCT CASE WHEN event_name = 'size_changed' THEN client_id END) AS size_changed,
-        ROUND(COUNT(DISTINCT CASE WHEN event_name = 'size_changed' THEN client_id END) * 100.0 / t.base_users, 2) AS size_changed_pct,
-        COUNT(DISTINCT CASE WHEN event_name = 'product_added_to_cart' THEN client_id END) AS atc,
-        ROUND(COUNT(DISTINCT CASE WHEN event_name = 'product_added_to_cart' THEN client_id END) * 100.0 / t.base_users, 2) AS atc_pct,
-        COUNT(DISTINCT CASE WHEN event_name = 'checkout_completed' THEN client_id END) AS completed,
-        ROUND(COUNT(DISTINCT CASE WHEN event_name = 'checkout_completed' THEN client_id END) * 100.0 / t.base_users, 2) AS conversion_pct
-    FROM valid_events v
-    JOIN totals t ON v.arm = t.arm
-    GROUP BY v.arm, t.base_users
-    ORDER BY v.arm;
-    """).df()
-
-  # 2. Revenue & AOV
-  df_revenue = con.execute("""
-    WITH user_arm AS (
-        SELECT client_id, json_extract_string(event_data, '$.experiment_var') AS arm,
-               ROW_NUMBER() OVER (PARTITION BY client_id ORDER BY ingestion_timestamp ASC) AS rn
-        FROM read_csv_auto('ab_hero_v4_events.csv')
-        WHERE event_name = 'ab_experiment_init'
-    ),
-    valid_events AS (
-        SELECT e.*, u.arm FROM read_csv_auto('ab_hero_v4_events.csv') e
-        JOIN user_arm u ON e.client_id = u.client_id 
-        WHERE u.rn = 1 AND u.arm IS NOT NULL AND e.session_traffic_quality = 'valid'
-    ),
-    totals AS (
-        SELECT arm, COUNT(DISTINCT client_id) AS base_users FROM valid_events GROUP BY arm
-    ),
-    orders_parsed AS (
-        SELECT DISTINCT client_id, arm,
-               TRY_CAST(json_extract_string(event_data, '$.order_id') AS INT64) AS order_id
-        FROM valid_events WHERE event_name = 'checkout_completed'
-    ),
-    order_vals AS (
-        SELECT o.arm, o.order_id, SUM(i.value) AS order_total
-        FROM orders_parsed o
-        JOIN read_csv_auto('ab_hero_v4_order_line_items.csv') i ON o.order_id = i.order_id
-        GROUP BY o.arm, o.order_id
-    )
-    SELECT 
-        v.arm,
-        t.base_users,
-        COUNT(v.order_id) AS total_orders,
-        ROUND(AVG(v.order_total), 2) AS avg_order_value_aov,
-        ROUND(SUM(v.order_total), 2) AS total_revenue,
-        ROUND(SUM(v.order_total) / t.base_users, 2) AS revenue_per_user_rpu
-    FROM order_vals v
-    JOIN totals t ON v.arm = t.arm
-    GROUP BY v.arm, t.base_users
-    ORDER BY v.arm;
-    """).df()
-
-  # 3. Conditional Behavior
-  df_cond = con.execute("""
-    WITH user_arm AS (
-        SELECT client_id, json_extract_string(event_data, '$.experiment_var') AS arm,
-               ROW_NUMBER() OVER (PARTITION BY client_id ORDER BY ingestion_timestamp ASC) AS rn
-        FROM read_csv_auto('ab_hero_v4_events.csv')
-        WHERE event_name = 'ab_experiment_init'
-    ),
-    valid_events AS (
-        SELECT e.*, u.arm FROM read_csv_auto('ab_hero_v4_events.csv') e
-        JOIN user_arm u ON e.client_id = u.client_id 
-        WHERE u.rn = 1 AND u.arm IS NOT NULL AND e.session_traffic_quality = 'valid'
-    ),
-    user_flags AS (
-        SELECT client_id, arm,
-               MAX(CASE WHEN event_name = 'size_changed' THEN 1 ELSE 0 END) AS has_sc,
-               MAX(CASE WHEN event_name = 'product_added_to_cart' THEN 1 ELSE 0 END) AS has_atc,
-               MAX(CASE WHEN event_name = 'checkout_completed' THEN 1 ELSE 0 END) AS has_co
-        FROM valid_events GROUP BY client_id, arm
-    )
-    SELECT 
-        arm,
-        CASE WHEN has_sc = 1 THEN 'Size Selector' ELSE 'Default Bypasser' END AS user_segment,
-        COUNT(client_id) AS segment_user_count,
-        ROUND(AVG(has_atc) * 100.0, 2) AS atc_rate_pct,
-        ROUND(AVG(has_co) * 100.0, 2) AS purchase_rate_pct
-    FROM user_flags
-    GROUP BY arm, CASE WHEN has_sc = 1 THEN 'Size Selector' ELSE 'Default Bypasser' END
-    ORDER BY arm, user_segment;
-    """).df()
-
-  # 4. Scroll Reachability Curve
-  df_scroll = con.execute("""
-    WITH user_arm AS (
-        SELECT client_id, json_extract_string(event_data, '$.experiment_var') AS arm,
-               ROW_NUMBER() OVER (PARTITION BY client_id ORDER BY ingestion_timestamp ASC) AS rn
-        FROM read_csv_auto('ab_hero_v4_events.csv')
-        WHERE event_name = 'ab_experiment_init'
-    ),
-    valid_events AS (
-        SELECT e.*, u.arm FROM read_csv_auto('ab_hero_v4_events.csv') e
-        JOIN user_arm u ON e.client_id = u.client_id 
-        WHERE u.rn = 1 AND u.arm IS NOT NULL AND e.session_traffic_quality = 'valid'
-    ),
-    user_max_scroll AS (
-        SELECT client_id, arm,
-               MAX(TRY_CAST(json_extract_string(event_data, '$.scroll_depth_pct') AS DOUBLE)) AS max_depth
-        FROM valid_events WHERE event_name = 'scroll' GROUP BY client_id, arm
-    ),
-    arm_totals AS (
-        SELECT arm, COUNT(DISTINCT client_id) AS base_users FROM valid_events GROUP BY arm
-    )
-    SELECT 
-        m.arm,
-        ROUND(COUNT(DISTINCT CASE WHEN max_depth >= 10 THEN m.client_id END) * 100.0 / t.base_users, 2) AS "10%",
-        ROUND(COUNT(DISTINCT CASE WHEN max_depth >= 25 THEN m.client_id END) * 100.0 / t.base_users, 2) AS "25%",
-        ROUND(COUNT(DISTINCT CASE WHEN max_depth >= 50 THEN m.client_id END) * 100.0 / t.base_users, 2) AS "50%",
-        ROUND(COUNT(DISTINCT CASE WHEN max_depth >= 75 THEN m.client_id END) * 100.0 / t.base_users, 2) AS "75%",
-        ROUND(COUNT(DISTINCT CASE WHEN max_depth >= 100 THEN m.client_id END) * 100.0 / t.base_users, 2) AS "100%"
-    FROM user_max_scroll m JOIN arm_totals t ON m.arm = t.arm
-    GROUP BY m.arm, t.base_users ORDER BY m.arm;
-    """).df()
-
-  df_scroll_melted = df_scroll.melt(
-      id_vars=["arm"], var_name="Depth", value_name="Reach_Pct"
+  # Flexibly handles filename variations (.csv extension / spelling)
+  cond_file = (
+      "3_conditional_behaviour.csv"
+      if os.path.exists(os.path.join(BASE_DIR, "3_conditional_behaviour.csv"))
+      else "3_conditional_behavior.csv"
   )
+  df_cond = pd.read_csv(os.path.join(BASE_DIR, cond_file))
 
-  # 5. Device Friction
-  df_device = con.execute("""
-    WITH user_arm AS (
-        SELECT client_id, json_extract_string(event_data, '$.experiment_var') AS arm,
-               ROW_NUMBER() OVER (PARTITION BY client_id ORDER BY ingestion_timestamp ASC) AS rn
-        FROM read_csv_auto('ab_hero_v4_events.csv')
-        WHERE event_name = 'ab_experiment_init'
-    ),
-    valid_events AS (
-        SELECT e.*, u.arm FROM read_csv_auto('ab_hero_v4_events.csv') e
-        JOIN user_arm u ON e.client_id = u.client_id 
-        WHERE u.rn = 1 AND u.arm IS NOT NULL AND e.session_traffic_quality = 'valid'
+  df_scroll = pd.read_csv(os.path.join(BASE_DIR, "4_scroll_telemetry.csv"))
+
+  # Melt scroll data if exported in wide format
+  if "Depth" not in df_scroll.columns and "10%" in df_scroll.columns:
+    df_scroll = df_scroll.melt(
+        id_vars=["arm"], var_name="Depth", value_name="Reach_Pct"
     )
-    SELECT 
-        arm, device,
-        COUNT(DISTINCT client_id) AS total_users,
-        ROUND(COUNT(DISTINCT CASE WHEN event_name = 'size_changed' THEN client_id END) * 100.0 / COUNT(DISTINCT client_id), 2) AS size_selector_pct,
-        ROUND(COUNT(DISTINCT CASE WHEN event_name = 'checkout_completed' THEN client_id END) * 100.0 / COUNT(DISTINCT client_id), 2) AS conversion_pct
-    FROM valid_events GROUP BY arm, device ORDER BY device, arm;
-    """).df()
 
-  # 6. Revenue Loss Attribution
-  df_attr = con.execute("""
-    WITH user_arm AS (
-        SELECT client_id, json_extract_string(event_data, '$.experiment_var') AS arm,
-               ROW_NUMBER() OVER (PARTITION BY client_id ORDER BY ingestion_timestamp ASC) AS rn
-        FROM read_csv_auto('ab_hero_v4_events.csv')
-        WHERE event_name = 'ab_experiment_init'
-    ),
-    valid_events AS (
-        SELECT e.*, u.arm FROM read_csv_auto('ab_hero_v4_events.csv') e
-        JOIN user_arm u ON e.client_id = u.client_id 
-        WHERE u.rn = 1 AND u.arm IS NOT NULL AND e.session_traffic_quality = 'valid'
-    ),
-    totals AS (
-        SELECT arm, COUNT(DISTINCT client_id) AS base_users FROM valid_events GROUP BY arm
-    ),
-    orders_parsed AS (
-        SELECT DISTINCT client_id, arm,
-               TRY_CAST(json_extract_string(event_data, '$.order_id') AS INT64) AS order_id
-        FROM valid_events WHERE event_name = 'checkout_completed'
-    ),
-    order_vals AS (
-        SELECT o.arm, o.order_id, SUM(i.value) AS order_total
-        FROM orders_parsed o
-        JOIN read_csv_auto('ab_hero_v4_order_line_items.csv') i ON o.order_id = i.order_id
-        GROUP BY o.arm, o.order_id
-    ),
-    arm_metrics AS (
-        SELECT 
-            v.arm, t.base_users,
-            COUNT(v.order_id) * 1.0 / t.base_users AS cr,
-            AVG(v.order_total) AS aov,
-            SUM(v.order_total) / t.base_users AS rpu
-        FROM order_vals v JOIN totals t ON v.arm = t.arm GROUP BY v.arm, t.base_users
-    )
-    SELECT 
-        ROUND(a.rpu, 2) AS rpu_a, ROUND(b.rpu, 2) AS rpu_b,
-        ROUND(b.rpu - a.rpu, 2) AS total_rpu_delta,
-        ROUND((b.cr - a.cr) * a.aov, 2) AS cr_impact,
-        ROUND(b.cr * (b.aov - a.aov), 2) AS aov_impact
-    FROM arm_metrics a JOIN arm_metrics b ON a.arm = 'a' AND b.arm = 'b';
-    """).df()
+  df_device = pd.read_csv(os.path.join(BASE_DIR, "5_device_friction.csv"))
 
-  return df_funnel, df_revenue, df_cond, df_scroll_melted, df_device, df_attr
+  attr_file = (
+      "6_revenue_attribution.csv"
+      if os.path.exists(os.path.join(BASE_DIR, "6_revenue_attribution.csv"))
+      else "6_revenue_attribution"
+  )
+  df_attr = pd.read_csv(os.path.join(BASE_DIR, attr_file))
+
+  return df_funnel, df_revenue, df_cond, df_scroll, df_device, df_attr
 
 
 try:
   df_funnel, df_revenue, df_cond, df_scroll, df_device, df_attr = (
-      run_sql_pipeline()
+      load_sql_data()
   )
 except Exception as e:
   st.error(
-      f"Error running SQL engine on raw CSV files. Ensure `ab_hero_v4_events.csv`"
-      f" and `ab_hero_v4_order_line_items.csv` are present. Details: {e}"
+      f"Error loading pre-computed SQL CSV outputs. Please ensure all SQL summary"
+      f" CSV files exist. Details: {e}"
   )
   st.stop()
 
@@ -474,7 +301,7 @@ with st.sidebar:
   st.markdown("""
     **Project:** Puffy Lux PDP A/B Test  
     **Author:** Nihal Rajeev Sainudeen  
-    **Role:** Data Analyst / Engineer  
+    **Role:** Data Analyst  
     """)
   st.markdown("---")
   st.markdown("### Key Takeaway")

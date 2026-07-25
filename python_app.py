@@ -1,8 +1,11 @@
-import json
+import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+
+# Base Directory Setup
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # -----------------------------------------------------------------------------
 # 1. Page Configuration & Executive CSS
@@ -43,162 +46,49 @@ st.markdown(
 
 
 # -----------------------------------------------------------------------------
-# 2. Dynamic Pipeline (Pure Pandas Direct Processing)
+# 2. Fast CSV Data Ingestion
 # -----------------------------------------------------------------------------
 @st.cache_data
-def run_python_pipeline():
-  events = pd.read_csv("ab_hero_v4_events.csv")
-  orders = pd.read_csv("ab_hero_v4_order_line_items.csv")
+def load_python_data():
+  df_funnel = pd.read_csv(os.path.join(BASE_DIR, "py_1_linear_funnel.csv"))
+  df_revenue = pd.read_csv(os.path.join(BASE_DIR, "py_2_revenue_metrics.csv"))
 
-  def parse_json(val, k):
-    try:
-      return json.loads(val).get(k)
-    except:
-      return None
-
-  # Parse experiment assignment
-  ab_init = events[events["event_name"] == "ab_experiment_init"].copy()
-  ab_init["arm"] = ab_init["event_data"].apply(
-      lambda x: parse_json(x, "experiment_var")
+  # Flexibly handles filename variations (.csv extension / spelling)
+  cond_file = (
+      "py_3_conditional_behaviour.csv"
+      if os.path.exists(os.path.join(BASE_DIR, "py_3_conditional_behaviour.csv"))
+      else "py_3_conditional_behavior.csv"
   )
-  ab_init = ab_init.dropna(subset=["arm"]).sort_values("ingestion_timestamp")
-  user_arms = ab_init.groupby("client_id")["arm"].first().reset_index()
+  df_cond = pd.read_csv(os.path.join(BASE_DIR, cond_file))
 
-  df = events.merge(user_arms, on="client_id", how="inner")
-  valid = df[df["session_traffic_quality"] == "valid"].copy()
-  totals = valid.groupby("arm")["client_id"].nunique().to_dict()
+  df_scroll = pd.read_csv(os.path.join(BASE_DIR, "py_4_scroll_telemetry.csv"))
 
-  # 1. Linear Funnel
-  funnel_data = []
-  for arm in ["a", "b"]:
-    sub = valid[valid["arm"] == arm]
-    b_u = totals[arm]
-    sc = sub[sub["event_name"] == "size_changed"]["client_id"].nunique()
-    atc = sub[sub["event_name"] == "product_added_to_cart"]["client_id"].nunique()
-    co = sub[sub["event_name"] == "checkout_completed"]["client_id"].nunique()
-    funnel_data.append({
-        "arm": arm,
-        "base_users": b_u,
-        "size_changed_pct": round((sc / b_u) * 100, 2),
-        "atc_pct": round((atc / b_u) * 100, 2),
-        "conversion_pct": round((co / b_u) * 100, 2),
-    })
-  df_funnel = pd.DataFrame(funnel_data)
+  # Melt scroll data if exported in wide format
+  if "Depth" not in df_scroll.columns and "10%" in df_scroll.columns:
+    df_scroll = df_scroll.melt(
+        id_vars=["arm"], var_name="Depth", value_name="Reach_Pct"
+    )
 
-  # 2. Revenue & AOV
-  cc = valid[valid["event_name"] == "checkout_completed"].copy()
-  cc["order_id"] = pd.to_numeric(
-      cc["event_data"].apply(lambda x: parse_json(x, "order_id")),
-      errors="coerce",
+  df_device = pd.read_csv(os.path.join(BASE_DIR, "py_5_device_friction.csv"))
+
+  attr_file = (
+      "py_6_revenue_attribution.csv"
+      if os.path.exists(os.path.join(BASE_DIR, "py_6_revenue_attribution.csv"))
+      else "py_6_revenue_attribution"
   )
-  cc_orders = cc[["client_id", "arm", "order_id"]].drop_duplicates()
-  merged_orders = orders.merge(cc_orders, on="order_id", how="inner")
-  order_tot = (
-      merged_orders.groupby(["order_id", "arm"])["value"].sum().reset_index()
-  )
-
-  rev_data = []
-  for arm in ["a", "b"]:
-    sub = order_tot[order_tot["arm"] == arm]
-    b_u = totals[arm]
-    tot_rev = sub["value"].sum()
-    rev_data.append({
-        "arm": arm,
-        "avg_order_value_aov": round(sub["value"].mean(), 2),
-        "revenue_per_user_rpu": round(tot_rev / b_u, 2),
-    })
-  df_revenue = pd.DataFrame(rev_data)
-
-  # 3. Conditional Behavior
-  flags = (
-      valid.groupby(["client_id", "arm"])
-      .agg(
-          has_sc=("event_name", lambda x: int((x == "size_changed").any())),
-          has_co=(
-              "event_name",
-              lambda x: int((x == "checkout_completed").any()),
-          ),
-      )
-      .reset_index()
-  )
-
-  cond_data = []
-  for arm in ["a", "b"]:
-    sub = flags[flags["arm"] == arm]
-    for val, name in [(1, "Size Selector"), (0, "Default Bypasser")]:
-      seg = sub[sub["has_sc"] == val]
-      cond_data.append({
-          "arm": arm,
-          "user_segment": name,
-          "purchase_rate_pct": round(seg["has_co"].mean() * 100, 2),
-      })
-  df_cond = pd.DataFrame(cond_data)
-
-  # 4. Scroll Reachability Curve
-  scrolls = valid[valid["event_name"] == "scroll"].copy()
-  scrolls["depth"] = pd.to_numeric(
-      scrolls["event_data"].apply(lambda x: parse_json(x, "scroll_depth_pct")),
-      errors="coerce",
-  )
-  user_scroll = (
-      scrolls.groupby(["client_id", "arm"])["depth"].max().reset_index()
-  )
-
-  scroll_reach = []
-  for arm in ["a", "b"]:
-    b_u = totals[arm]
-    sub = user_scroll[user_scroll["arm"] == arm]
-    for d in [10, 25, 50, 75, 100]:
-      reach = (sub["depth"] >= d).sum()
-      scroll_reach.append({
-          "arm": arm,
-          "Depth": f"{d}%",
-          "Reach_Pct": round((reach / b_u) * 100, 2),
-      })
-  df_scroll = pd.DataFrame(scroll_reach)
-
-  # 5. Device Friction
-  dev_data = []
-  for (arm, device), group in valid.groupby(["arm", "device"]):
-    tot = group["client_id"].nunique()
-    sc_cnt = group[group["event_name"] == "size_changed"]["client_id"].nunique()
-    dev_data.append({
-        "arm": arm,
-        "device": device,
-        "size_selector_pct": round((sc_cnt / tot) * 100, 2),
-    })
-  df_device = pd.DataFrame(dev_data)
-
-  # 6. Attribution
-  cr_a = (
-      df_funnel[df_funnel["arm"] == "a"]["conversion_pct"].values[0] / 100.0
-  )
-  cr_b = (
-      df_funnel[df_funnel["arm"] == "b"]["conversion_pct"].values[0] / 100.0
-  )
-  aov_a = df_revenue[df_revenue["arm"] == "a"]["avg_order_value_aov"].values[0]
-  aov_b = df_revenue[df_revenue["arm"] == "b"]["avg_order_value_aov"].values[0]
-  rpu_a = df_revenue[df_revenue["arm"] == "a"]["revenue_per_user_rpu"].values[0]
-  rpu_b = df_revenue[df_revenue["arm"] == "b"]["revenue_per_user_rpu"].values[0]
-
-  df_attr = pd.DataFrame([{
-      "cr_impact": round((cr_b - cr_a) * aov_a, 2),
-      "aov_impact": round(cr_b * (aov_b - aov_a), 2),
-      "total_rpu_delta": round(rpu_b - rpu_a, 2),
-  }])
+  df_attr = pd.read_csv(os.path.join(BASE_DIR, attr_file))
 
   return df_funnel, df_revenue, df_cond, df_scroll, df_device, df_attr
 
 
 try:
   df_funnel, df_revenue, df_cond, df_scroll, df_device, df_attr = (
-      run_python_pipeline()
+      load_python_data()
   )
 except Exception as e:
   st.error(
-      "Error processing raw CSV files with Pandas. Ensure"
-      " `ab_hero_v4_events.csv` and `ab_hero_v4_order_line_items.csv` exist."
-      f" Details: {e}"
+      f"Error loading pre-computed Python CSV outputs. Please ensure all"
+      f" 'py_*' summary CSV files exist. Details: {e}"
   )
   st.stop()
 
@@ -411,7 +301,7 @@ with st.sidebar:
   st.markdown("""
     **Project:** Puffy Lux PDP A/B Test  
     **Author:** Nihal Rajeev Sainudeen  
-    **Role:** Data Analyst / Engineer  
+    **Role:** Data Analyst  
     """)
   st.markdown("---")
   st.markdown("### Key Takeaway")
