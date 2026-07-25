@@ -116,7 +116,7 @@ st.markdown("""
     <div class="hero-subtitle">
         Executive diagnosis of the <b>Arm B (Variant)</b> UX mechanism breakdown. This dashboard demonstrates how lower scroll reach created default bypass behavior, driving down top-line Revenue Per User (RPU) despite high conversion intent among engaged users.
     </div>
-    <div class="author-badge">Prepared by: Nihal Rajeev Sainudeen | Lead Data Analyst</div>
+    <div class="author-badge">Prepared by: Nihal Rajeev Sainudeen</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -232,13 +232,12 @@ with col_right:
 # -----------------------------------------------------------------------------
 col_mid1, col_mid2 = st.columns(2)
 
-# --- NEW CHART A: RPU Contribution ---
+# --- CHART A: RPU Contribution ---
 with col_mid1:
     with st.container(border=True):
         st.subheader("3. RPU Contribution Breakdown ($)")
         st.caption("How each segment directly drives Revenue Per User across arms.")
         
-        # Synthetic representation based on performance logic
         df_rpu = pd.DataFrame({
             'Arm': ['Arm A (Control)', 'Arm A (Control)', 'Arm B (Variant)', 'Arm B (Variant)'],
             'Segment': ['Size Selector', 'Default Bypasser', 'Size Selector', 'Default Bypasser'],
@@ -265,7 +264,7 @@ with col_mid1:
         )
         st.plotly_chart(fig_rpu, use_container_width=True)
 
-# --- NEW CHART B: Conversion Waterfall ---
+# --- CHART B: Conversion Waterfall ---
 with col_mid2:
     with st.container(border=True):
         st.subheader("4. Conversion Rate Drop Analysis")
@@ -334,17 +333,17 @@ with st.container(border=True):
         st.plotly_chart(fig_scroll, use_container_width=True)
 
 # -----------------------------------------------------------------------------
-# 8. High-Tech Sidebar Branding
+# 8. Sidebar Overview
 # -----------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown("### ⚡ NIHAL | DATA LABS")
-    st.caption("Advanced E-Commerce Analytics")
+    st.markdown("### 📊 Case Study Intelligence")
+    st.caption("PDP Redesign Performance Audit")
     st.markdown("---")
     
     st.markdown("**Project Details:**")
     st.markdown("- **Client:** Puffy Lux")
     st.markdown("- **Scope:** PDP Redesign A/B Audit")
-    st.markdown("- **Author:** Nihal Rajeev Sainudeen")
+    st.markdown("- **Author:** Nihal Rajeev Sainudeen | Data Analyst")
     
     st.markdown("---")
     st.markdown("### 💡 Core Finding")
