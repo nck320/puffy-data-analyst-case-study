@@ -394,8 +394,8 @@ def generate_pdf_report(fig_funnel, fig_cond, fig_scroll, fig_water,
   c.drawString(margin, height - 1.7 * inch,
                "Author: Nihal Rajeev Sainudeen   |   Role: Data Analyst")
 
-  box_y = height - 2.55 * inch
-  box_h = 0.9 * inch
+  box_y = height - 3.0 * inch
+  box_h = 0.85 * inch
   c.setFillColor(colors.HexColor("#1E293B"))
   c.rect(margin, box_y, width - 2 * margin, box_h, fill=1, stroke=0)
   c.setFillColor(colors.HexColor("#3B82F6"))
