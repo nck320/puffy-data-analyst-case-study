@@ -4,11 +4,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-# Base Directory Setup
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # -----------------------------------------------------------------------------
-# 1. Page Configuration & Executive CSS
+# 1. Page Configuration & CSS
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="Puffy Lux PDP Redesign — A/B Experiment Analysis (Pandas)",
@@ -20,25 +19,11 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    .main {
-        padding-top: 1rem;
-    }
-    h1 {
-        font-weight: 700;
-        letter-spacing: -0.5px;
-    }
-    .stMetric label {
-        font-size: 0.85rem !important;
-        font-weight: 600 !important;
-        color: #A1A1AA !important;
-    }
-    .stMetric [data-testid="stMetricValue"] {
-        font-size: 1.8rem !important;
-        font-weight: 700 !important;
-    }
-    div[data-testid="stContainer"] {
-        border-radius: 10px;
-    }
+    .main { padding-top: 1rem; }
+    h1 { font-weight: 700; letter-spacing: -0.5px; }
+    .stMetric label { font-size: 0.85rem !important; font-weight: 600 !important; color: #A1A1AA !important; }
+    .stMetric [data-testid="stMetricValue"] { font-size: 1.8rem !important; font-weight: 700 !important; }
+    div[data-testid="stContainer"] { border-radius: 10px; }
     </style>
 """,
     unsafe_allow_html=True,
@@ -46,14 +31,13 @@ st.markdown(
 
 
 # -----------------------------------------------------------------------------
-# 2. Fast CSV Data Ingestion
+# 2. Resilient Data Loading
 # -----------------------------------------------------------------------------
 @st.cache_data
 def load_python_data():
   df_funnel = pd.read_csv(os.path.join(BASE_DIR, "py_1_linear_funnel.csv"))
   df_revenue = pd.read_csv(os.path.join(BASE_DIR, "py_2_revenue_metrics.csv"))
 
-  # Flexibly handles filename variations (.csv extension / spelling)
   cond_file = (
       "py_3_conditional_behaviour.csv"
       if os.path.exists(os.path.join(BASE_DIR, "py_3_conditional_behaviour.csv"))
@@ -63,10 +47,18 @@ def load_python_data():
 
   df_scroll = pd.read_csv(os.path.join(BASE_DIR, "py_4_scroll_telemetry.csv"))
 
-  # Melt scroll data if exported in wide format
+  # Automatically standardize scroll telemetry format
   if "Depth" not in df_scroll.columns and "10%" in df_scroll.columns:
     df_scroll = df_scroll.melt(
         id_vars=["arm"], var_name="Depth", value_name="Reach_Pct"
+    )
+  elif "scroll_depth_pct" in df_scroll.columns:
+    df_scroll = df_scroll.rename(
+        columns={
+            "scroll_depth_pct": "Depth",
+            "user_reach_pct": "Reach_Pct",
+            "reach_pct": "Reach_Pct",
+        }
     )
 
   df_device = pd.read_csv(os.path.join(BASE_DIR, "py_5_device_friction.csv"))
@@ -87,15 +79,15 @@ try:
   )
 except Exception as e:
   st.error(
-      f"Error loading pre-computed Python CSV outputs. Please ensure all"
-      f" 'py_*' summary CSV files exist. Details: {e}"
+      f"Error loading pre-computed Python CSV outputs. Please check CSV files."
+      f" Details: {e}"
   )
   st.stop()
 
 arm_map = {"a": "Arm A (Control)", "b": "Arm B (Variant)"}
 
 # -----------------------------------------------------------------------------
-# 3. Header Section
+# 3. Header & KPI Panel
 # -----------------------------------------------------------------------------
 st.title("🧪 Puffy Lux PDP Redesign — A/B Experiment Analysis (Pandas)")
 st.caption(
@@ -104,9 +96,6 @@ st.caption(
 )
 st.markdown("---")
 
-# -----------------------------------------------------------------------------
-# 4. KPI Summary Panel
-# -----------------------------------------------------------------------------
 cr_a = df_funnel[df_funnel["arm"] == "a"]["conversion_pct"].values[0]
 cr_b = df_funnel[df_funnel["arm"] == "b"]["conversion_pct"].values[0]
 rpu_a = df_revenue[df_revenue["arm"] == "a"]["revenue_per_user_rpu"].values[0]
@@ -136,7 +125,7 @@ with st.container(border=True):
 st.write("")
 
 # -----------------------------------------------------------------------------
-# 5. Visualizations Section
+# 4. Core Visualizations Section
 # -----------------------------------------------------------------------------
 col_left, col_right = st.columns(2)
 
@@ -187,7 +176,7 @@ with col_left:
     )
     st.plotly_chart(fig_funnel, use_container_width=True)
 
-# --- RIGHT PANEL: Conditional Behavioral Segmentation ---
+# --- RIGHT PANEL: Conditional Purchase Rate ---
 with col_right:
   with st.container(border=True):
     st.subheader("2. Conditional Purchase Rate by Segment")
@@ -223,7 +212,7 @@ with col_right:
     st.plotly_chart(fig_cond, use_container_width=True)
 
 # -----------------------------------------------------------------------------
-# 6. Scroll Telemetry & Financial Attribution
+# 5. Scroll Telemetry & Financial Attribution
 # -----------------------------------------------------------------------------
 col_scroll, col_attr = st.columns(2)
 
@@ -294,7 +283,7 @@ with col_attr:
     st.plotly_chart(fig_water, use_container_width=True)
 
 # -----------------------------------------------------------------------------
-# 7. Sidebar Information & Links
+# 6. Sidebar Information & Links
 # -----------------------------------------------------------------------------
 with st.sidebar:
   st.title("📌 Case Study Overview")
