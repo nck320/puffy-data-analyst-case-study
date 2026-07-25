@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+import stramlit.components.v1 as components
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -15,7 +16,18 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
+#PDF Download Button
+st.sidebar.markdown("---")
+if st.sidebar.button("📄 Print / Export PDF"):
+  components.html(
+      """
+        <script>
+            window.parent.print();
+        </script>
+        """,
+      height=0,
+      width=0,
+)
 st.markdown(
     """
     <style>
