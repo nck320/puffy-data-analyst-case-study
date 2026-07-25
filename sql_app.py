@@ -15,7 +15,7 @@ from reportlab.pdfgen import canvas
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # -----------------------------------------------------------------------------
-# 1. Page Configuration & CSS (print-media rules removed — see PDF export below)
+# 1. Page Configuration & CSS
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="Puffy Lux PDP Redesign — A/B Experiment Intelligence (SQL)",
@@ -53,7 +53,7 @@ st.markdown(
 
 
 # -----------------------------------------------------------------------------
-# 2. Fast CSV Data Ingestion
+# 2. CSV Data Ingestion
 # -----------------------------------------------------------------------------
 @st.cache_data
 def load_sql_data():
@@ -112,8 +112,7 @@ except Exception as e:
 arm_map = {"a": "Arm A (Control)", "b": "Arm B (Variant)"}
 
 # -----------------------------------------------------------------------------
-# 3. Sidebar — Case Study Details (PDF download button added further down,
-#    once the figures exist)
+# 3. Sidebar — Case Study Details
 # -----------------------------------------------------------------------------
 with st.sidebar:
   st.title("📌 Case Study Overview")
@@ -335,12 +334,6 @@ with col_attr:
 
 # -----------------------------------------------------------------------------
 # 8. Real PDF Export — reportlab + kaleido (replaces window.print())
-#
-# Why: browsers don't reliably respect `break-inside: avoid` across Streamlit's
-# iframe-embedded Plotly charts, so window.print() sliced charts across page
-# boundaries no matter what print CSS was applied. Rendering each chart to a
-# PNG (via kaleido) and placing it explicitly on a reportlab canvas gives full,
-# deterministic control over pagination — nothing is ever cut off.
 # -----------------------------------------------------------------------------
 def fig_to_image(fig, width=1400, height=820, scale=2):
   """Render a Plotly figure to a high-res transparent PNG for the PDF."""
@@ -497,7 +490,7 @@ with pdf_slot.container():
     st.download_button(
         label="⬇️ Download PDF",
         data=st.session_state["pdf_buffer"],
-        file_name="puffy_pdp_ab_report.pdf",
+        file_name="Puffy_Lux_PDP_Experiment_Results.pdf",
         mime="application/pdf",
         key="pdf_download_sql",
     )
