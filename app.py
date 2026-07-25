@@ -186,16 +186,25 @@ with st.container(border=True):
     
     if not df_scroll.empty:
         df_scroll_plot = df_scroll.copy()
+        df_scroll_plot.columns = [c.lower().strip() for c in df_scroll_plot.columns]
         df_scroll_plot['Arm_Label'] = df_scroll_plot['arm'].map(arm_map)
+        
+        # Dynamically find x (depth) and y (reach/percentage) columns
+        x_col = [c for c in df_scroll_plot.columns if 'depth' in c or 'bucket' in c or 'scroll' in c]
+        y_col = [c for c in df_scroll_plot.columns if 'reach' in c or 'pct' in c or 'rate' in c or 'user' in c]
+        
+        scroll_x = x_col[0] if x_col else df_scroll_plot.columns[1]
+        scroll_y = y_col[0] if y_col else df_scroll_plot.columns[2]
         
         fig_scroll = px.line(
             df_scroll_plot,
-            x='scroll_depth_bucket',
-            y='user_reach_pct',
+            x=scroll_x,
+            y=scroll_y,
             color='Arm_Label',
             markers=True,
+            category_orders={'Arm_Label': ['Arm A (Control)', 'Arm B (Variant)']},
             color_discrete_sequence=['#6366F1', '#F43F5E'],
-            labels={'user_reach_pct': 'User Reach (%)', 'scroll_depth_bucket': 'Scroll Depth', 'Arm_Label': 'Arm'}
+            labels={scroll_y: 'User Reach (%)', scroll_x: 'Scroll Depth', 'Arm_Label': 'Arm'}
         )
         
         fig_scroll.update_layout(
