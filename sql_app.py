@@ -276,7 +276,8 @@ with col_attr:
     st.subheader("4. RPU Loss Attribution Breakdown")
     st.caption("Mathematical breakdown of RPU drop (Conversion vs AOV).")
 
-    cr_imp = df_attr["cr_impact"].values[0]
+    # Safe retrieval matching exact CSV header
+    cr_imp = df_attr["conversion_rate_impact"].values[0]
     aov_imp = df_attr["aov_impact"].values[0]
     tot_delta = df_attr["total_rpu_delta"].values[0]
 
@@ -286,7 +287,7 @@ with col_attr:
             measure=["relative", "relative", "total"],
             x=["Conversion Drop", "AOV Drift", "Net RPU Delta"],
             y=[cr_imp, aov_imp, tot_delta],
-            text=[f"${cr_imp}", f"${aov_imp}", f"${tot_delta}"],
+            text=[f"${cr_imp:.2f}", f"${aov_imp:.2f}", f"${tot_delta:.2f}"],
             textposition="outside",
             connector={"line": {"color": "rgb(63, 63, 63)"}},
             decreasing={"marker": {"color": "#F43F5E"}},
