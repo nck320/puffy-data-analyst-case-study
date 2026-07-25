@@ -115,8 +115,7 @@ arm_map = {"a": "Arm A (Control)", "b": "Arm B (Variant)"}
 # 3. Sidebar — Case Study Details
 # -----------------------------------------------------------------------------
 with st.sidebar:
-  # --- NEW: Load Logo ---
-  logo_path = os.path.join(BASE_DIR, "puffy_logo.jpg")
+  logo_path = os.path.join(BASE_DIR, "puffy_dark_logo.jpg")
   if os.path.exists(logo_path):
       st.image(logo_path, use_column_width=True)
   
@@ -138,6 +137,7 @@ with st.sidebar:
       "[📂 GitHub"
       " Repository](https://github.com/nck320/puffy-data-analyst-case-study)"
   )
+
 # -----------------------------------------------------------------------------
 # 4. Executive Header Section
 # -----------------------------------------------------------------------------
@@ -381,19 +381,16 @@ def generate_pdf_report(fig_funnel, fig_cond, fig_scroll, fig_water,
   # ---- Page 1: Cover + Key Takeaway + KPIs ----
   draw_background(c, width, height)
   
-  # --- Robust Logo Drawing for ReportLab ---
   if os.path.exists(logo_path):
       try:
-          # Center the logo nicely at the top of the cover page
-          logo_w = 2.2 * inch
-          logo_h = 0.8 * inch
+          logo_w = 3.2 * inch
+          logo_h = 1.1 * inch
           logo_x = (width - logo_w) / 2
-          logo_y = height - 1.6 * inch
+          logo_y = height - 1.8 * inch
           c.drawImage(logo_path, logo_x, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask="auto")
       except Exception as e:
           print(f"Could not render logo in PDF: {e}")
-
-  # Balanced vertical shift for a centered look
+  
   shift_y = 1.0 * inch 
 
   c.setFillColor(colors.white)
