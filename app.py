@@ -110,22 +110,25 @@ with col_left:
         st.subheader("1. Linear Engagement Metrics (%)")
         st.caption("Comparison of Size Interaction and Add-to-Cart rates across arms.")
         
-        # Prepare Funnel Data without flattening Conversion Rate
         df_funnel_plot = df_funnel.copy()
+        
+        # Ensure 'arm' exists in lowercase
+        df_funnel_plot.columns = [c.lower().strip() for c in df_funnel_plot.columns]
         df_funnel_plot['Arm_Label'] = df_funnel_plot['arm'].map(arm_map)
         
-        # Filter out conversion_pct for the main interaction chart so scales stay clear
-        df_interaction = df_funnel_plot[df_funnel_plot['metric_name'] != 'conversion_pct']
+        # Determine the correct metric column name dynamically
+        metric_col = 'metric_name' if 'metric_name' in df_funnel_plot.columns else df_funnel_plot.columns[1]
+        val_col = 'value' if 'value' in df_funnel_plot.columns else df_funnel_plot.columns[2]
         
         fig_funnel = px.bar(
-            df_interaction,
+            df_funnel_plot,
             x='Arm_Label',
-            y='value',
-            color='metric_name',
+            y=val_col,
+            color=metric_col,
             barmode='group',
             category_orders={'Arm_Label': ['Arm A (Control)', 'Arm B (Variant)']},
-            color_discrete_sequence=['#6366F1', '#06B6D4'],
-            labels={'value': 'Percentage (%)', 'Arm_Label': 'Experiment Arm', 'metric_name': 'Metric'}
+            color_discrete_sequence=['#6366F1', '#06B6D4', '#10B981'],
+            labels={val_col: 'Percentage (%)', 'Arm_Label': 'Experiment Arm', metric_col: 'Metric'}
         )
         
         fig_funnel.update_layout(
@@ -145,17 +148,23 @@ with col_right:
         st.caption("Conversion rate split by Size Selectors vs. Default Bypassers.")
         
         df_cond_plot = df_conditional.copy()
+        df_cond_plot.columns = [c.lower().strip() for c in df_cond_plot.columns]
         df_cond_plot['Arm_Label'] = df_cond_plot['arm'].map(arm_map)
+        
+        # Identify columns dynamically
+        seg_col = 'user_segment' if 'user_segment' in df_cond_plot.columns else df_cond_plot.columns[1]
+        rate_col = [c for c in df_cond_plot.columns if 'rate' in c or 'pct' in c or 'purchase' in c]
+        y_col = rate_col[0] if rate_col else df_cond_plot.columns[2]
         
         fig_cond = px.bar(
             df_cond_plot,
-            x='user_segment',
-            y='purchase_rate_pct',
+            x=seg_col,
+            y=y_col,
             color='Arm_Label',
             barmode='group',
             category_orders={'Arm_Label': ['Arm A (Control)', 'Arm B (Variant)']},
             color_discrete_sequence=['#818CF8', '#38BDF8'],
-            labels={'purchase_rate_pct': 'Purchase Rate (%)', 'user_segment': 'User Segment', 'Arm_Label': 'Arm'}
+            labels={y_col: 'Purchase Rate (%)', seg_col: 'User Segment', 'Arm_Label': 'Arm'}
         )
         
         fig_cond.update_layout(
