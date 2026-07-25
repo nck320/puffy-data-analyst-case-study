@@ -1,0 +1,5 @@
+arm,user_segment,segment_user_count,atc_rate_pct,purchase_rate_pct
+a,Default Bypasser,418,0.96,0.0
+a,Size Selector,2079,22.7,3.17
+b,Default Bypasser,756,1.98,0.13
+b,Size Selector,1980,24.04,2.42
