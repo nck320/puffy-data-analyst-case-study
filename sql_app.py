@@ -52,10 +52,10 @@ st.markdown(
         bottom: 0;
         width: 100%;
         background-color: #0E1117;
-        color: #64748B;
+        color: #94A3B8;
         text-align: center;
-        padding: 10px;
-        font-size: 0.8rem;
+        padding: 16px;
+        font-size: 1.2rem;
         border-top: 1px solid #1E293B;
         z-index: 999;
     }
