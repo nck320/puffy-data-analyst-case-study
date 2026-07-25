@@ -115,6 +115,11 @@ arm_map = {"a": "Arm A (Control)", "b": "Arm B (Variant)"}
 # 3. Sidebar — Case Study Details
 # -----------------------------------------------------------------------------
 with st.sidebar:
+  # --- NEW: Load Logo ---
+  logo_path = os.path.join(BASE_DIR, "puffy_logo.png")
+  if os.path.exists(logo_path):
+      st.image(logo_path, use_column_width=True)
+  
   st.title("📌 Case Study Overview")
   st.markdown("""
     **Project:** Puffy Lux PDP A/B Test  
@@ -133,7 +138,6 @@ with st.sidebar:
       "[📂 GitHub"
       " Repository](https://github.com/nck320/puffy-data-analyst-case-study)"
   )
-
 # -----------------------------------------------------------------------------
 # 4. Executive Header Section
 # -----------------------------------------------------------------------------
@@ -376,18 +380,27 @@ def generate_pdf_report(fig_funnel, fig_cond, fig_scroll, fig_water,
 
   # ---- Page 1: Cover + Key Takeaway + KPIs ----
   draw_background(c, width, height)
+  
+  # --- NEW: Draw Logo at the Top ---
+  logo_path = os.path.join(BASE_DIR, "puffy_logo.png")
+  if os.path.exists(logo_path):
+      c.drawImage(logo_path, margin, height - 1.5 * inch, width=2 * inch, preserveAspectRatio=True, mask="auto")
+  
+  # --- NEW: Shift variable to center the content and fix dead space ---
+  shift_y = 2.5 * inch 
+
   c.setFillColor(colors.white)
   c.setFont("Helvetica-Bold", 22)
-  c.drawString(margin, height - 1.1 * inch, "Puffy Lux PDP Redesign")
+  c.drawString(margin, height - 1.1 * inch - shift_y, "Puffy Lux PDP Redesign")
   c.setFont("Helvetica-Bold", 14)
   c.setFillColor(colors.HexColor("#94A3B8"))
-  c.drawString(margin, height - 1.4 * inch, "A/B Experiment Intelligence Report")
+  c.drawString(margin, height - 1.4 * inch - shift_y, "A/B Experiment Intelligence Report")
   c.setFont("Helvetica", 9)
   c.setFillColor(colors.HexColor("#CBD5E1"))
-  c.drawString(margin, height - 1.7 * inch,
+  c.drawString(margin, height - 1.7 * inch - shift_y,
                "Author: Nihal Rajeev Sainudeen   |   Role: Data Analyst")
 
-  box_y = height - 3.0 * inch
+  box_y = height - 3.0 * inch - shift_y
   box_h = 0.85 * inch
   c.setFillColor(colors.HexColor("#1E293B"))
   c.rect(margin, box_y, width - 2 * margin, box_h, fill=1, stroke=0)
