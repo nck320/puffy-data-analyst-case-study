@@ -337,7 +337,7 @@ with col_attr:
 
 
 # -----------------------------------------------------------------------------
-# 8. Real PDF Export — reportlab + kaleido (replaces window.print())
+# 8. Real PDF Export
 # -----------------------------------------------------------------------------
 def fig_to_image(fig, width=1400, height=820, scale=2):
   """Render a Plotly figure to a high-res transparent PNG for the PDF."""
@@ -385,7 +385,6 @@ def generate_pdf_report(fig_funnel, fig_cond, fig_scroll, fig_water,
   if os.path.exists(logo_path):
       c.drawImage(logo_path, margin, height - 1.5 * inch, width=2 * inch, preserveAspectRatio=True, mask="auto")
   
-  # --- NEW: Shift variable to center the content and fix dead space ---
   shift_y = 2.5 * inch 
 
   c.setFillColor(colors.white)
@@ -449,7 +448,7 @@ def generate_pdf_report(fig_funnel, fig_cond, fig_scroll, fig_water,
   draw_footer(c, width, margin, "Page 1 of 3")
   c.showPage()
 
-  # ---- Page 2: Funnel + Conditional Purchase Rate (stacked, full width) ----
+  # ---- Page 2: Funnel + Conditional Purchase Rate ----
   draw_background(c, width, height)
   draw_header(c, width, height, "1–2. Engagement Funnel & Conditional Purchase Rate")
 
@@ -470,7 +469,7 @@ def generate_pdf_report(fig_funnel, fig_cond, fig_scroll, fig_water,
   draw_footer(c, width, margin, "Page 2 of 3")
   c.showPage()
 
-  # ---- Page 3: Scroll Telemetry + RPU Waterfall (stacked, full width) ----
+  # ---- Page 3: Scroll Telemetry + RPU Waterfall ----
   draw_background(c, width, height)
   draw_header(c, width, height, "3–4. Scroll Telemetry & RPU Loss Attribution")
 
