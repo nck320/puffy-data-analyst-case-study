@@ -1,7 +1,0 @@
-arm,device,total_users,size_selectors,size_selector_pct,conversion_pct
-a,Desktop,457,413,90.37,6.13
-b,Desktop,535,452,84.49,2.62
-a,Mobile,1905,1568,82.31,1.94
-b,Mobile,1989,1390,69.88,1.66
-a,Tablet,135,98,72.59,0.74
-b,Tablet,212,138,65.09,0.94
