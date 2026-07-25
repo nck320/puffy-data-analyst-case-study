@@ -2,3 +2,5 @@ duckdb
 pandas 
 plotly 
 streamlit 
+kaleido==0.2.1
+reportlab
