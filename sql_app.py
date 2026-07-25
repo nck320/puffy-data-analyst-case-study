@@ -342,7 +342,7 @@ with col_attr:
 # PNG (via kaleido) and placing it explicitly on a reportlab canvas gives full,
 # deterministic control over pagination — nothing is ever cut off.
 # -----------------------------------------------------------------------------
-def fig_to_image(fig, width=1400, height=700, scale=2):
+def fig_to_image(fig, width=1400, height=820, scale=2):
   """Render a Plotly figure to a high-res transparent PNG for the PDF."""
   png_bytes = fig.to_image(format="png", width=width, height=height, scale=scale)
   return ImageReader(io.BytesIO(png_bytes))
@@ -449,14 +449,17 @@ def generate_pdf_report(fig_funnel, fig_cond, fig_scroll, fig_water,
   draw_header(c, width, height, "1–2. Engagement Funnel & Conditional Purchase Rate")
 
   chart_w = width - 2 * margin
-  chart_h = 3.1 * inch
+  top_offset = 1.05 * inch   # space reserved for header
+  bottom_offset = 0.4 * inch  # space reserved for footer
+  gap = 0.3 * inch
+  chart_h = (height - top_offset - bottom_offset - gap) / 2
 
   img1 = fig_to_image(fig_funnel)
-  c.drawImage(img1, margin, height - 1.05 * inch - chart_h,
+  c.drawImage(img1, margin, height - top_offset - chart_h,
               width=chart_w, height=chart_h, preserveAspectRatio=True, mask="auto")
 
   img2 = fig_to_image(fig_cond)
-  c.drawImage(img2, margin, height - 1.05 * inch - 2 * chart_h - 0.3 * inch,
+  c.drawImage(img2, margin, height - top_offset - 2 * chart_h - gap,
               width=chart_w, height=chart_h, preserveAspectRatio=True, mask="auto")
 
   draw_footer(c, width, margin, "Page 2 of 3")
@@ -467,11 +470,11 @@ def generate_pdf_report(fig_funnel, fig_cond, fig_scroll, fig_water,
   draw_header(c, width, height, "3–4. Scroll Telemetry & RPU Loss Attribution")
 
   img3 = fig_to_image(fig_scroll)
-  c.drawImage(img3, margin, height - 1.05 * inch - chart_h,
+  c.drawImage(img3, margin, height - top_offset - chart_h,
               width=chart_w, height=chart_h, preserveAspectRatio=True, mask="auto")
 
   img4 = fig_to_image(fig_water)
-  c.drawImage(img4, margin, height - 1.05 * inch - 2 * chart_h - 0.3 * inch,
+  c.drawImage(img4, margin, height - top_offset - 2 * chart_h - gap,
               width=chart_w, height=chart_h, preserveAspectRatio=True, mask="auto")
 
   draw_footer(c, width, margin, "Page 3 of 3")
