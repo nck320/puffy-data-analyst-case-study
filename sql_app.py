@@ -372,7 +372,7 @@ def draw_footer(c, width, margin, page_label):
 
 
 def generate_pdf_report(fig_funnel, fig_cond, fig_scroll, fig_water,
-                         cr_a, cr_b, rpu_a, rpu_b):
+                         cr_a, cr_b, rpu_a, rpu_b, logo_path):
   buffer = io.BytesIO()
   c = canvas.Canvas(buffer, pagesize=letter)
   width, height = letter
@@ -381,7 +381,6 @@ def generate_pdf_report(fig_funnel, fig_cond, fig_scroll, fig_water,
   # ---- Page 1: Cover + Key Takeaway + KPIs ----
   draw_background(c, width, height)
   
-  # --- NEW: Draw Logo at the Top ---
   logo_path = os.path.join(BASE_DIR, "puffy_logo.jpg")
   if os.path.exists(logo_path):
       c.drawImage(logo_path, margin, height - 1.5 * inch, width=2 * inch, preserveAspectRatio=True, mask="auto")
@@ -495,7 +494,7 @@ with pdf_slot.container():
   if st.button("📄 Generate PDF Report", key="pdf_gen_sql"):
     with st.spinner("Rendering charts to PDF..."):
       pdf_buffer = generate_pdf_report(
-          fig_funnel, fig_cond, fig_scroll, fig_water, cr_a, cr_b, rpu_a, rpu_b
+          fig_funnel, fig_cond, fig_scroll, fig_water, cr_a, cr_b, rpu_a, rpu_b, logo_path
       )
     st.session_state["pdf_buffer"] = pdf_buffer.getvalue()
 
