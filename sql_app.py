@@ -116,7 +116,7 @@ arm_map = {"a": "Arm A (Control)", "b": "Arm B (Variant)"}
 # -----------------------------------------------------------------------------
 with st.sidebar:
   # --- NEW: Load Logo ---
-  logo_path = os.path.join(BASE_DIR, "puffy_logo.png")
+  logo_path = os.path.join(BASE_DIR, "puffy_logo.jpg")
   if os.path.exists(logo_path):
       st.image(logo_path, use_column_width=True)
   
@@ -382,7 +382,7 @@ def generate_pdf_report(fig_funnel, fig_cond, fig_scroll, fig_water,
   draw_background(c, width, height)
   
   # --- NEW: Draw Logo at the Top ---
-  logo_path = os.path.join(BASE_DIR, "puffy_logo.png")
+  logo_path = os.path.join(BASE_DIR, "puffy_logo.jpg")
   if os.path.exists(logo_path):
       c.drawImage(logo_path, margin, height - 1.5 * inch, width=2 * inch, preserveAspectRatio=True, mask="auto")
   
