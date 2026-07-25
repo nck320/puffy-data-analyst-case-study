@@ -138,7 +138,7 @@ with st.sidebar:
 # -----------------------------------------------------------------------------
 # 4. Executive Header Section
 # -----------------------------------------------------------------------------
-st.title("🧪 Puffy Lux PDP Redesign — A/B Experiment Analysis (DuckDB)")
+st.title("🧪 Puffy Lux PDP Redesign — A/B Experiment Analysis")
 st.caption(
     "Arm A (Control) vs. Arm B (Variant) Behavioral & Financial Performance"
     " Audit"
