@@ -7,7 +7,7 @@ import streamlit as st
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # -----------------------------------------------------------------------------
-# 1. Page Configuration & CSS
+# 1. Page Configuration & Executive CSS
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="Puffy Lux PDP Redesign — A/B Experiment Intelligence (SQL)",
@@ -19,11 +19,25 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    .main { padding-top: 1rem; }
-    h1 { font-weight: 700; letter-spacing: -0.5px; }
-    .stMetric label { font-size: 0.85rem !important; font-weight: 600 !important; color: #A1A1AA !important; }
-    .stMetric [data-testid="stMetricValue"] { font-size: 1.8rem !important; font-weight: 700 !important; }
-    div[data-testid="stContainer"] { border-radius: 10px; }
+    .main {
+        padding-top: 1rem;
+    }
+    h1 {
+        font-weight: 700;
+        letter-spacing: -0.5px;
+    }
+    .stMetric label {
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+        color: #A1A1AA !important;
+    }
+    .stMetric [data-testid="stMetricValue"] {
+        font-size: 1.8rem !important;
+        font-weight: 700 !important;
+    }
+    div[data-testid="stContainer"] {
+        border-radius: 10px;
+    }
     </style>
 """,
     unsafe_allow_html=True,
@@ -31,7 +45,7 @@ st.markdown(
 
 
 # -----------------------------------------------------------------------------
-# 2. Resilient Data Loading
+# 2. Fast CSV Data Ingestion
 # -----------------------------------------------------------------------------
 @st.cache_data
 def load_sql_data():
@@ -47,18 +61,22 @@ def load_sql_data():
 
   df_scroll = pd.read_csv(os.path.join(BASE_DIR, "4_scroll_telemetry.csv"))
 
-  # Automatically standardize scroll telemetry format
-  if "Depth" not in df_scroll.columns and "10%" in df_scroll.columns:
+  # Melt wide depth columns into long format for Plotly Express
+  if "depth_10_pct" in df_scroll.columns:
     df_scroll = df_scroll.melt(
-        id_vars=["arm"], var_name="Depth", value_name="Reach_Pct"
+        id_vars=["arm"],
+        value_vars=[
+            "depth_10_pct",
+            "depth_25_pct",
+            "depth_50_pct",
+            "depth_75_pct",
+            "depth_100_pct",
+        ],
+        var_name="Depth",
+        value_name="Reach_Pct",
     )
-  elif "scroll_depth_pct" in df_scroll.columns:
-    df_scroll = df_scroll.rename(
-        columns={
-            "scroll_depth_pct": "Depth",
-            "user_reach_pct": "Reach_Pct",
-            "reach_pct": "Reach_Pct",
-        }
+    df_scroll["Depth"] = (
+        df_scroll["Depth"].str.replace("depth_", "").str.replace("_pct", "%")
     )
 
   df_device = pd.read_csv(os.path.join(BASE_DIR, "5_device_friction.csv"))
@@ -79,15 +97,15 @@ try:
   )
 except Exception as e:
   st.error(
-      f"Error loading pre-computed SQL CSV outputs. Please check CSV files."
-      f" Details: {e}"
+      f"Error loading pre-computed SQL CSV outputs. Please ensure all SQL summary"
+      f" CSV files exist. Details: {e}"
   )
   st.stop()
 
 arm_map = {"a": "Arm A (Control)", "b": "Arm B (Variant)"}
 
 # -----------------------------------------------------------------------------
-# 3. Header & KPI Panel
+# 3. Header Section
 # -----------------------------------------------------------------------------
 st.title("🧪 Puffy Lux PDP Redesign — A/B Experiment Analysis (DuckDB)")
 st.caption(
@@ -96,6 +114,9 @@ st.caption(
 )
 st.markdown("---")
 
+# -----------------------------------------------------------------------------
+# 4. KPI Summary Panel
+# -----------------------------------------------------------------------------
 cr_a = df_funnel[df_funnel["arm"] == "a"]["conversion_pct"].values[0]
 cr_b = df_funnel[df_funnel["arm"] == "b"]["conversion_pct"].values[0]
 rpu_a = df_revenue[df_revenue["arm"] == "a"]["revenue_per_user_rpu"].values[0]
@@ -125,7 +146,7 @@ with st.container(border=True):
 st.write("")
 
 # -----------------------------------------------------------------------------
-# 4. Core Visualizations Section
+# 5. Core Visualizations Section
 # -----------------------------------------------------------------------------
 col_left, col_right = st.columns(2)
 
@@ -212,7 +233,7 @@ with col_right:
     st.plotly_chart(fig_cond, use_container_width=True)
 
 # -----------------------------------------------------------------------------
-# 5. Scroll Telemetry & Financial Attribution
+# 6. Scroll Telemetry & Financial Attribution
 # -----------------------------------------------------------------------------
 col_scroll, col_attr = st.columns(2)
 
@@ -283,7 +304,7 @@ with col_attr:
     st.plotly_chart(fig_water, use_container_width=True)
 
 # -----------------------------------------------------------------------------
-# 6. Sidebar Information & Links
+# 7. Sidebar Information & Links
 # -----------------------------------------------------------------------------
 with st.sidebar:
   st.title("📌 Case Study Overview")
