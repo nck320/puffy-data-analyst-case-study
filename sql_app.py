@@ -381,24 +381,33 @@ def generate_pdf_report(fig_funnel, fig_cond, fig_scroll, fig_water,
   # ---- Page 1: Cover + Key Takeaway + KPIs ----
   draw_background(c, width, height)
   
-  logo_path = os.path.join(BASE_DIR, "puffy_logo.jpg")
+  # --- Robust Logo Drawing for ReportLab ---
   if os.path.exists(logo_path):
-      c.drawImage(logo_path, margin, height - 1.5 * inch, width=2 * inch, preserveAspectRatio=True, mask="auto")
-  
-  shift_y = 2.5 * inch 
+      try:
+          # Center the logo nicely at the top of the cover page
+          logo_w = 2.2 * inch
+          logo_h = 0.8 * inch
+          logo_x = (width - logo_w) / 2
+          logo_y = height - 1.6 * inch
+          c.drawImage(logo_path, logo_x, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask="auto")
+      except Exception as e:
+          print(f"Could not render logo in PDF: {e}")
+
+  # Balanced vertical shift for a centered look
+  shift_y = 1.0 * inch 
 
   c.setFillColor(colors.white)
-  c.setFont("Helvetica-Bold", 22)
-  c.drawString(margin, height - 1.1 * inch - shift_y, "Puffy Lux PDP Redesign")
-  c.setFont("Helvetica-Bold", 14)
+  c.setFont("Helvetica-Bold", 20)
+  c.drawString(margin, height - 1.9 * inch - shift_y, "Puffy Lux PDP Redesign")
+  c.setFont("Helvetica-Bold", 13)
   c.setFillColor(colors.HexColor("#94A3B8"))
-  c.drawString(margin, height - 1.4 * inch - shift_y, "A/B Experiment Intelligence Report")
+  c.drawString(margin, height - 2.2 * inch - shift_y, "A/B Experiment Intelligence Report")
   c.setFont("Helvetica", 9)
   c.setFillColor(colors.HexColor("#CBD5E1"))
-  c.drawString(margin, height - 1.7 * inch - shift_y,
+  c.drawString(margin, height - 2.5 * inch - shift_y,
                "Author: Nihal Rajeev Sainudeen   |   Role: Data Analyst")
 
-  box_y = height - 3.0 * inch - shift_y
+  box_y = height - 3.7 * inch - shift_y
   box_h = 0.85 * inch
   c.setFillColor(colors.HexColor("#1E293B"))
   c.rect(margin, box_y, width - 2 * margin, box_h, fill=1, stroke=0)
@@ -453,8 +462,8 @@ def generate_pdf_report(fig_funnel, fig_cond, fig_scroll, fig_water,
   draw_header(c, width, height, "1–2. Engagement Funnel & Conditional Purchase Rate")
 
   chart_w = width - 2 * margin
-  top_offset = 1.05 * inch   # space reserved for header
-  bottom_offset = 0.4 * inch  # space reserved for footer
+  top_offset = 1.05 * inch  
+  bottom_offset = 0.4 * inch  
   gap = 0.3 * inch
   chart_h = (height - top_offset - bottom_offset - gap) / 2
 
