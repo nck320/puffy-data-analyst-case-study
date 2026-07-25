@@ -8,7 +8,7 @@ import streamlit.components.v1 as components
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # -----------------------------------------------------------------------------
-# 1. Page Configuration & Executive CSS
+# 1. Page Configuration & Print-Optimized CSS
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="Puffy Lux PDP Redesign — A/B Experiment Intelligence (SQL)",
@@ -16,18 +16,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-#PDF Download Button
-st.sidebar.markdown("---")
-if st.sidebar.button("📄 Print / Export PDF"):
-  components.html(
-      """
-        <script>
-            window.parent.print();
-        </script>
-        """,
-      height=0,
-      width=0,
-)
+
 st.markdown(
     """
     <style>
@@ -49,6 +38,48 @@ st.markdown(
     }
     div[data-testid="stContainer"] {
         border-radius: 10px;
+    }
+
+    /* Print / PDF Executive Export Styles */
+    @media print {
+        section[data-testid="stSidebar"],
+        header[data-testid="stHeader"],
+        .no-print,
+        iframe,
+        button {
+            display: none !important;
+        }
+
+        .main .block-container {
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .print-header {
+            display: block !important;
+            border-bottom: 2px solid #3B82F6;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        div[data-testid="stContainer"],
+        .element-container,
+        .stPlotlyChart {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+        }
+
+        body {
+            background-color: #0E1117 !important;
+            color: #FFFFFF !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+    }
+
+    .print-header {
+        display: none;
     }
     </style>
 """,
@@ -117,8 +148,52 @@ except Exception as e:
 arm_map = {"a": "Arm A (Control)", "b": "Arm B (Variant)"}
 
 # -----------------------------------------------------------------------------
-# 3. Header Section
+# 3. Sidebar Actions & Case Study Details
 # -----------------------------------------------------------------------------
+with st.sidebar:
+  st.title("📌 Case Study Overview")
+  st.markdown("""
+    **Project:** Puffy Lux PDP A/B Test  
+    **Author:** Nihal Rajeev Sainudeen  
+    **Role:** Data Analyst  
+    """)
+  st.markdown("---")
+  st.markdown("### Key Takeaway")
+  st.info("""
+    **Arm B suffered from UX friction.**
+    While Arm B Size Selectors convert well, lower scroll reach led more users to bypass selector interaction entirely, driving down total revenue.
+    """)
+  st.markdown("---")
+
+  if st.button("📄 Print / Export PDF", key="pdf_btn_sql"):
+    components.html(
+        "<script>window.parent.print();</script>", height=0, width=0
+    )
+
+  st.markdown(
+      "[📂 GitHub"
+      " Repository](https://github.com/nck320/puffy-data-analyst-case-study)"
+  )
+
+# -----------------------------------------------------------------------------
+# 4. Executive Header Section (Web View & Dedicated Print Header)
+# -----------------------------------------------------------------------------
+st.markdown(
+    """
+    <div class="print-header">
+        <h2 style="margin:0; color:#F8FAFC;">Puffy Lux PDP Redesign — A/B Experiment Report</h2>
+        <p style="margin:4px 0 10px 0; color:#94A3B8; font-size: 0.9rem;">Author: Nihal Rajeev Sainudeen | Role: Data Analyst</p>
+        <div style="background-color: #1E293B; padding: 12px 16px; border-left: 4px solid #3B82F6; border-radius: 4px; margin-bottom: 15px;">
+            <strong style="color: #60A5FA;">Key Takeaway:</strong> 
+            <span style="color: #E2E8F0; font-size: 0.95rem;">
+                Arm B suffered from UX friction. While Arm B Size Selectors convert well, lower scroll reach led more users to bypass selector interaction entirely, driving down total revenue.
+            </span>
+        </div>
+    </div>
+""",
+    unsafe_allow_html=True,
+)
+
 st.title("🧪 Puffy Lux PDP Redesign — A/B Experiment Analysis (DuckDB)")
 st.caption(
     "Arm A (Control) vs. Arm B (Variant) Behavioral & Financial Performance"
@@ -127,7 +202,7 @@ st.caption(
 st.markdown("---")
 
 # -----------------------------------------------------------------------------
-# 4. KPI Summary Panel
+# 5. KPI Summary Panel
 # -----------------------------------------------------------------------------
 cr_a = df_funnel[df_funnel["arm"] == "a"]["conversion_pct"].values[0]
 cr_b = df_funnel[df_funnel["arm"] == "b"]["conversion_pct"].values[0]
@@ -158,7 +233,7 @@ with st.container(border=True):
 st.write("")
 
 # -----------------------------------------------------------------------------
-# 5. Core Visualizations Section
+# 6. Core Visualizations Section
 # -----------------------------------------------------------------------------
 col_left, col_right = st.columns(2)
 
@@ -245,7 +320,7 @@ with col_right:
     st.plotly_chart(fig_cond, use_container_width=True)
 
 # -----------------------------------------------------------------------------
-# 6. Scroll Telemetry & Financial Attribution
+# 7. Scroll Telemetry & Financial Attribution
 # -----------------------------------------------------------------------------
 col_scroll, col_attr = st.columns(2)
 
@@ -288,7 +363,6 @@ with col_attr:
     st.subheader("4. RPU Loss Attribution Breakdown")
     st.caption("Mathematical breakdown of RPU drop (Conversion vs AOV).")
 
-    # Safe retrieval matching exact CSV header
     cr_imp = df_attr["conversion_rate_impact"].values[0]
     aov_imp = df_attr["aov_impact"].values[0]
     tot_delta = df_attr["total_rpu_delta"].values[0]
@@ -315,25 +389,3 @@ with col_attr:
         yaxis_title="RPU Impact ($)",
     )
     st.plotly_chart(fig_water, use_container_width=True)
-
-# -----------------------------------------------------------------------------
-# 7. Sidebar Information & Links
-# -----------------------------------------------------------------------------
-with st.sidebar:
-  st.title("📌 Case Study Overview")
-  st.markdown("""
-    **Project:** Puffy Lux PDP A/B Test  
-    **Author:** Nihal Rajeev Sainudeen  
-    **Role:** Data Analyst  
-    """)
-  st.markdown("---")
-  st.markdown("### Key Takeaway")
-  st.info("""
-    **Arm B suffered from UX friction.**
-    While Arm B Size Selectors convert well, lower scroll reach led more users to bypass selector interaction entirely, driving down total revenue.
-    """)
-  st.markdown("---")
-  st.markdown(
-      "[📂 GitHub"
-      " Repository](https://github.com/nck320/puffy-data-analyst-case-study)"
-  )
