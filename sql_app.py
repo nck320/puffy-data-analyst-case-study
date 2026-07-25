@@ -46,6 +46,19 @@ st.markdown(
     div[data-testid="stContainer"] {
         border-radius: 10px;
     }
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: #0E1117;
+        color: #64748B;
+        text-align: center;
+        padding: 10px;
+        font-size: 0.8rem;
+        border-top: 1px solid #1E293B;
+        z-index: 999;
+    }
     </style>
 """,
     unsafe_allow_html=True,
@@ -383,10 +396,10 @@ def generate_pdf_report(fig_funnel, fig_cond, fig_scroll, fig_water,
   
   if os.path.exists(logo_path):
       try:
-          logo_w = 3.2 * inch
-          logo_h = 1.1 * inch
+          logo_w = 5.0 * inch
+          logo_h = 2.5 * inch
           logo_x = (width - logo_w) / 2
-          logo_y = height - 1.8 * inch
+          logo_y = height - 2.2 * inch
           c.drawImage(logo_path, logo_x, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask="auto")
       except Exception as e:
           print(f"Could not render logo in PDF: {e}")
@@ -511,3 +524,15 @@ with pdf_slot.container():
         mime="application/pdf",
         key="pdf_download_sql",
     )
+
+# -----------------------------------------------------------------------------
+# 9. Webpage Footer / Disclaimer
+# -----------------------------------------------------------------------------
+st.markdown(
+    """
+    <div class="footer">
+        <p>Disclaimer: This website is built strictly for analytical and assessment purposes. All underlying clickstream data is simulated.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
